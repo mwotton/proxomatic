@@ -3,6 +3,6 @@ module Network.Proxy.Types where
 import           Data.Attoparsec.ByteString (Parser)
 import           Data.ByteString            (ByteString)
 
-type Proxy = Parser ByteString
+data Proxy = Proxy (Parser ByteString) (IO Bool)
 type Port = Int
-type Host = ByteString
+type Host = String
