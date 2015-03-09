@@ -1,14 +1,22 @@
 {-# LANGUAGE OverloadedStrings, TupleSections #-}
 module Network.Proxy where
-import           ClassyPrelude
-import           Control.Concurrent         (threadDelay)
+
+import           Control.Applicative        ((<$>))
+import           Control.Concurrent         (newEmptyMVar, putMVar, takeMVar,
+                                             threadDelay)
 import           Control.Concurrent.Async   (async)
+import           Control.Monad              (forever)
+import           Control.Monad.IO.Class     (liftIO)
 import           Data.Attoparsec.ByteString (IResult (..), parseWith)
 import qualified Data.ByteString            as BS
+import           Data.IORef                 (atomicModifyIORef', newIORef,
+                                             readIORef)
+import           Data.Maybe                 (fromMaybe)
+import           Data.Monoid                ((<>))
 import           Network.Proxy.Types
 import           Network.Simple.TCP         (HostPreference (..), connect, recv,
                                              send, serve)
-import           Prelude                    ()
+
 
 proxy (listenPort, (remote, connectPort), Proxy parser healthCheck) = do
   unblocker <- newIORef (Just [])
@@ -17,7 +25,7 @@ proxy (listenPort, (remote, connectPort), Proxy parser healthCheck) = do
 
   where
     handler unblocker (listenSock, remoteAddr) = do
-      putStrLn $ "TCP connection established from " <> tshow remoteAddr
+      putStrLn $ "TCP connection established from " <> show remoteAddr
       blockIfNecessary unblocker
 
       result <- liftIO $ netParse parser listenSock
