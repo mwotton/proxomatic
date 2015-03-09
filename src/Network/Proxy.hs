@@ -24,6 +24,9 @@ proxy listenPort (Proxy parser healthCheck) = do
 
   where
     handler blockIfNecessary (listenSock, remoteAddr) = do
+
+      -- TODO add loop & check for new host:port pair so we can
+      -- keep persistent connections up
       putStrLn $ "TCP connection established from " <> show remoteAddr
       (connectHost,connectPort) <- blockIfNecessary
 

@@ -8,6 +8,7 @@ import           Data.Monoid                      ((<>))
 import           Network.Proxy.Types
 import           Prelude
 
+-- TODO add more reasonable healthcheck
 proxy :: [(Host, Port)] -> Proxy (Host,Port)
 proxy ports = Proxy parser (return (Just (head ports)))
 
