@@ -9,6 +9,7 @@ import           Control.Monad.IO.Class     (liftIO)
 import           Data.Attoparsec.ByteString (IResult (..), parseWith)
 import qualified Data.ByteString            as BS
 
+import           Control.Monad              (void)
 import           Data.Blocker               (newBlocker)
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid                ((<>))
@@ -38,12 +39,8 @@ proxy listenPort (Proxy parser healthCheck) = do
             untilDone (recv connectSock 65536) (send listenSock)
         x -> print ("bad shit happened parsing",x)
 
-    runHealthCheck block unblock = do
-      res <- healthCheck
-      case res of
-        Nothing -> block
-        Just x  -> unblock x
-      threadDelay 1000000
+    runHealthCheck block unblock =
+      healthCheck >>= maybe block unblock >> threadDelay 1000000
 
 untilDone from to = do
   r <- from
