@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TupleSections #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Network.Proxy where
 
 import           Control.Applicative        ((<$>))
