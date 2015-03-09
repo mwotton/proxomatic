@@ -38,8 +38,8 @@ proxy (listenPort, (remote, connectPort), Proxy parser healthCheck) = do
 
 
     runHealthCheck block unblock = do
-      healthCheck >>= \ok ->
-        if ok
+      ok <- healthCheck
+      if ok
         then unblock
         else block
       threadDelay 1000000
