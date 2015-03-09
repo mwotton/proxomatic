@@ -2,13 +2,15 @@
 module Data.Blocker where
 import           Control.Concurrent (newEmptyMVar, putMVar, takeMVar,
                                      threadDelay)
+import           Control.Monad      (join)
 import           Data.IORef         (atomicModifyIORef', newIORef, readIORef)
 import           Data.Maybe         (fromMaybe)
 
 
-newBlocker :: IO (IO (), IO (), IO ())
+
+newBlocker :: IO (IO a, IO (), a -> IO ())
 newBlocker = do
-  ref <- newIORef (Just [])
+  ref <- newIORef (Left [])
   return (blockIfNecessary ref, block ref, unblock ref)
 
   where
@@ -21,16 +23,28 @@ newBlocker = do
 
       ready <- readIORef ref
       case ready of
-        Nothing -> return () -- all good, we aren't waiting on anything.
-        Just _ -> do
+        Right x -> return x -- all good, we aren't waiting on anything.
+        Left _ -> do
           -- stuff to do, create a new mvar & wait on it
           blocker <- newEmptyMVar
           -- this adds the mvar to the list iff we are still blocked.
           todo <- atomicModifyIORef' ref (addToBlock blocker)
           todo
 
-    addToBlock blocker Nothing =  (Nothing, return ())
-    addToBlock blocker (Just blocked) = (Just (blocker:blocked), takeMVar blocker)
+    addToBlock blocker (Right details) = (Right details, return details)
+    addToBlock blocker (Left blocked)  = (Left (blocker:blocked), takeMVar blocker)
 
-    block ref  = atomicModifyIORef' ref ((Nothing,) . fromMaybe [] ) >>= mapM_ (`putMVar` ())
-    unblock ref =  atomicModifyIORef' ref     (\r -> (Just (fromMaybe [] r), ()))
+--    unblock ref  = atomicModifyIORef' ref ((Left undefined,) .
+  --    fromMaybe [] ) >>= mapM_ (`putMVar` ())
+    unblock ref val =
+      join $ atomicModifyIORef' ref
+        (either ((Right val,) . mapM_ (`putMVar` val))
+                (const (Right val,return ())))
+
+--                              (\x -> (Right (_foo,mapM_ (`putMVar` val)) _bar)))
+    -- unblock ref =  atomicModifyIORef' ref     (\r -> (Just (fromMaybe [] r), ()))
+    block ref  =
+      atomicModifyIORef' ref
+        (either (\x -> (Left x,  ()))
+                (const (Left [],  ())))
+        -- undefined -- atomicModifyIORef' ref  ((,val) . Right . fromMaybe [])

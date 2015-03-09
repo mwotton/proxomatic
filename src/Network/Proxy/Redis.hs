@@ -8,8 +8,8 @@ import           Data.Monoid                      ((<>))
 import           Network.Proxy.Types
 import           Prelude
 
-proxy :: [(Host, Port)] -> Proxy
-proxy ports = Proxy parser (return True)
+proxy :: [(Host, Port)] -> Proxy (Host,Port)
+proxy ports = Proxy parser (return (Just (head ports)))
 
 parser = (<>"\r\n") . BS.pack <$>
          manyTill anyChar (string "\r\n") <* string "\r\n"

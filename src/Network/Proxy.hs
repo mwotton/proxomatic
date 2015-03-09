@@ -16,32 +16,30 @@ import           Network.Proxy.Types
 import           Network.Simple.TCP         (HostPreference (..), connect, recv,
                                              send, serve)
 
-proxy (listenPort, (remote, connectPort), Proxy parser healthCheck) = do
+proxy listenPort (Proxy parser healthCheck) = do
   (blockIfNecessary, block, unblock) <- newBlocker
 
   canary <- async $ forever $ runHealthCheck block unblock
-  serve (Host remote) (show listenPort) (handler blockIfNecessary)
+  serve (Host "127.0.0.1") (show listenPort) (handler blockIfNecessary)
 
   where
     handler blockIfNecessary (listenSock, remoteAddr) = do
       putStrLn $ "TCP connection established from " <> show remoteAddr
-      blockIfNecessary
+      (connectHost,connectPort) <- blockIfNecessary
 
       result <- liftIO $ netParse parser listenSock
       case result of
         Done _ command -> do
-          connect remote (show connectPort) $ \(connectSock, _) -> do
+          connect connectHost (show connectPort) $ \(connectSock, _) -> do
             send connectSock command
             untilDone (recv connectSock 65536) (send listenSock)
-        x -> print ("bad shit happened parsing", x)
-
-
+        x -> print ("bad shit happened parsing",x)
 
     runHealthCheck block unblock = do
-      ok <- healthCheck
-      if ok
-        then unblock
-        else block
+      res <- healthCheck
+      case res of
+        Nothing -> block
+        Just x  -> unblock x
       threadDelay 1000000
 
 untilDone from to = do
