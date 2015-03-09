@@ -19,6 +19,7 @@ library
   exposed-modules:    Network.Proxy
                       Network.Proxy.Redis
                       Network.Proxy.Types
+                      Data.Blocker
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.7 && <4.8,
