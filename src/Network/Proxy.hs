@@ -43,7 +43,8 @@ proxy (listenPort, (remote, connectPort), Proxy parser healthCheck) = do
           -- stuff to do, create a new mvar & wait on it
           blocker <- newEmptyMVar
           -- this adds the mvar to the list iff we are still blocked.
-          join $ atomicModifyIORef' unblocker (addToBlock blocker)
+          todo <- atomicModifyIORef' unblocker (addToBlock blocker)
+          todo
 
     addToBlock blocker Nothing =  (Nothing, return ())
     addToBlock blocker (Just blocked) = (Just (blocker:blocked), takeMVar blocker)
