@@ -6,8 +6,6 @@ import           Control.Monad      (join)
 import           Data.IORef         (atomicModifyIORef', newIORef, readIORef)
 import           Data.Maybe         (fromMaybe)
 
-
-
 newBlocker :: IO (IO a, IO (), a -> IO ())
 newBlocker = do
   ref <- newIORef (Left [])
@@ -34,17 +32,12 @@ newBlocker = do
     addToBlock blocker (Right details) = (Right details, return details)
     addToBlock blocker (Left blocked)  = (Left (blocker:blocked), takeMVar blocker)
 
---    unblock ref  = atomicModifyIORef' ref ((Left undefined,) .
-  --    fromMaybe [] ) >>= mapM_ (`putMVar` ())
     unblock ref val =
       join $ atomicModifyIORef' ref
         (either ((Right val,) . mapM_ (`putMVar` val))
                 (const (Right val,return ())))
 
---                              (\x -> (Right (_foo,mapM_ (`putMVar` val)) _bar)))
-    -- unblock ref =  atomicModifyIORef' ref     (\r -> (Just (fromMaybe [] r), ()))
     block ref  =
       atomicModifyIORef' ref
         (either (\x -> (Left x,  ()))
                 (const (Left [],  ())))
-        -- undefined -- atomicModifyIORef' ref  ((,val) . Right . fromMaybe [])
