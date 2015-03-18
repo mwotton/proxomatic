@@ -14,11 +14,12 @@ import           Data.Monoid                      ((<>))
 import           Network.Proxy.Types
 import           Network.Simple.TCP               (connectSock, recv, send)
 import           Network.Simple.TCP               (Socket)
-
+import           Network.SocketUtil               (netParse)
 
 -- TODO add more reasonable healthcheck
 -- proxy :: [(Host, Port)] -> Proxy (Host,Port)
 
+proxy :: [(String, Int)] -> Proxy (Host, Port) (HM.HashMap (Host, Port) Socket)
 proxy ports = Proxy parser (HM.empty, healthCheck ports)
 
 
@@ -30,15 +31,15 @@ parser = (<>"\r\n") . BS.pack <$>
 healthCheck :: [(String,Int)] -> StateT (HM.HashMap (Host,Port) Socket) IO (Maybe (Host,Port))
 healthCheck ports = do
   openConns <- get
-  statuses <- liftIO $ (`mapConcurrently` ports) $ \hp@(host,port) -> do
 
+  statuses <- liftIO $ (`mapConcurrently` ports) $ \hp@(host,port) -> do
     conn <- case HM.lookup hp openConns of
-      Nothing -> fst <$> connectSock host (show port)
+      Nothing -> print ("connecting", host, port) >> fst <$> connectSock host (show port)
       Just x -> return x
-    send conn "role"
-    report <- recv conn 65536
-    let isMaster = case BS.lines <$> report of
-          Just (_:_:x:_) -> x == "master"
+    send conn "role\n"
+    result <- netParse (BS.pack <$> manyTill anyChar (string "*0\r\n")) conn
+    let isMaster = case BS.lines <$> result of
+          Just (_:_:x:_) -> x == "master\r"
           _ -> False
     return (isMaster,(hp,conn))
   put $ HM.fromList $ map snd statuses
